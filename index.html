@@ -3,609 +3,620 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Remelt Operations</title>
+<title>HMI SCADA System</title>
 <style>
-:root{--canvas:#e0e0e0;--chrome:#161616;--card:#f4f4f4;--border:#c6c6c6;
-  --text-1:#161616;--text-2:#525252;--text-3:#6f6f6f;--text-inv:#f4f4f4;
-  --val:#002d9c;--accent:#0f62fe;--accent-hover:#0043ce;
-  --toggle-auto:#78a9ff;--toggle-man:#be95ff;
-  --alarm-1:#da1e28;--alarm-2:#eb6200;--alarm-3:#f1c21b;
-  --ok-bg:#defbe6;--ok-text:#0e6027;--ok-dot:#198038;
-  --dat-bg:#f4f4f4;--dat-text:#525252;--dat-dot:#8d8d8d;
-  --bar-pv:#0f62fe;--bar-sp:#8d8d8d;--bar-out:#002d9c;
-  --eq-off:#6f6f6f;--eq-on:#f4f4f4;--eq-stroke:#525252;
-  --radius:8px;--radius-sm:5px;color-scheme:light;}
+:root{
+  --bg:#0f1319;--surface:#1a1f2b;--card:#222837;--card-hover:#2a3040;
+  --border:#2d3548;--border-light:#3a4560;
+  --text:#e8ecf1;--text-2:#9ba3b5;--text-3:#6b7489;
+  --cyan:#22d3ee;--cyan-dim:#0e7490;--blue:#3b82f6;--blue-dim:#1e40af;
+  --green:#22c55e;--green-dim:#15803d;--amber:#f59e0b;--amber-dim:#92400e;
+  --red:#ef4444;--red-dim:#991b1b;--purple:#a78bfa;--purple-dim:#6d28d9;
+  --orange:#f97316;
+  --radius:8px;--radius-sm:5px;--radius-lg:12px;
+  --sidebar-w:52px;
+  color-scheme:dark;
+}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden}
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 body{font-family:'Noto Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-  background:var(--canvas);color:var(--text-1);display:flex;flex-direction:column}
-body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--chrome);z-index:20}
+  background:var(--bg);color:var(--text);display:flex;flex-direction:column}
 
-/* ═══ HEADER ═══ */
-.hdr{height:46px;background:var(--chrome);display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0;z-index:5}
-.hdr-btn{background:none;border:1px solid #525252;color:var(--text-inv);font:600 13px/1 inherit;
-  padding:8px 14px;border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap;min-height:36px}
-.hdr-btn:hover{background:#393939}
-.hdr-btn.back::before{content:'\2190 ';font-size:14px}
-.hdr .title{color:#fff;font:600 15px/1.2 inherit;flex:1;text-align:center}
-.hdr .tag{font-size:10px;color:#8d8d8d;margin-left:6px;font-weight:400;
-  background:#393939;padding:2px 8px;border-radius:100px}
-.hdr .badge{display:flex;align-items:center;gap:5px;padding:6px 12px;
-  border-radius:100px;border:1px solid #525252;cursor:pointer;font-size:12px}
-.badge .dot{width:8px;height:8px;border-radius:50%;background:var(--alarm-2)}
-.badge .n{color:#fff;font-weight:700}.badge .l{color:#a8a8a8}
-.hdr .clk{color:#c6c6c6;font:13px/1 inherit;font-variant-numeric:tabular-nums;white-space:nowrap}
+/* ═══ TOP BAR ═══ */
+.topbar{height:36px;background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0;z-index:5}
+.topbar .logo{font:700 13px/1 inherit;color:var(--cyan);letter-spacing:.02em}
+.topbar .sep{color:var(--text-3);margin:0 4px}
+.topbar .bread{font:400 12px/1 inherit;color:var(--text-2)}
+.topbar .bread span{cursor:pointer;color:var(--cyan)}.topbar .bread span:hover{text-decoration:underline}
+.topbar .bread .cur{color:var(--text);cursor:default}
+.topbar .right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.topbar .badge{display:flex;align-items:center;gap:4px;font:600 11px/1 inherit;color:var(--text-2);
+  background:var(--card);padding:4px 10px;border-radius:100px;border:1px solid var(--border)}
+.topbar .badge .dot{width:6px;height:6px;border-radius:50%;background:var(--orange)}
+.topbar .badge .n{color:var(--text);font-weight:700}
+.topbar .clk{font:12px/1 inherit;color:var(--text-3);font-variant-numeric:tabular-nums}
 
-/* ═══ VIEWS ═══ */
-.view{display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0}
-.view.active{display:flex}
+/* ═══ BODY ═══ */
+.app{flex:1;display:flex;overflow:hidden;min-height:0}
 
-/* ═══ SVG MAPS ═══ */
-.map-wrap{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;padding:10px}
-.map-wrap svg{max-width:100%;max-height:100%;width:auto;height:auto}
-.map-wrap svg text{font-family:'Noto Sans',sans-serif}
-/* Clickable equipment */
-.eq-click{cursor:pointer}
-.eq-click:hover rect,.eq-click:hover circle,.eq-click:hover path{stroke:var(--accent);stroke-width:2.5}
-.eq-click:hover text{fill:var(--accent)}
+/* ═══ LEFT SIDEBAR ═══ */
+.sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:4px;flex-shrink:0}
+.sb-btn{width:40px;height:40px;border-radius:var(--radius);display:flex;align-items:center;
+  justify-content:center;cursor:pointer;background:transparent;border:none;color:var(--text-3);
+  font-size:18px;position:relative}
+.sb-btn:hover{background:var(--card);color:var(--text)}
+.sb-btn.active{background:var(--card);color:var(--cyan)}
+.sb-btn.active::before{content:'';position:absolute;left:0;top:8px;bottom:8px;width:3px;
+  background:var(--cyan);border-radius:0 2px 2px 0}
+.sb-btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sb-spacer{flex:1}
+
+/* ═══ MAIN CONTENT ═══ */
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+
+/* Tab bar */
+.tabbar{display:flex;padding:0 16px;gap:0;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.tab{padding:10px 18px;font:600 12px/1 inherit;color:var(--text-3);cursor:pointer;
+  border-bottom:2px solid transparent;white-space:nowrap}
+.tab:hover{color:var(--text)}.tab.active{color:var(--cyan);border-color:var(--cyan)}
+
+/* Views */
+.view{display:none;flex:1;overflow:hidden;min-height:0}.view.active{display:flex;flex-direction:column}
+
+/* Panels */
+.panels{flex:1;display:flex;flex-direction:column;overflow-y:auto;min-height:0}
+.panel-row{display:flex;gap:10px;padding:10px 14px;flex-shrink:0}
+.panel-row.stretch{flex:1;min-height:200px}
 
 /* ═══ CARDS ═══ */
-.c{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);
-  box-shadow:0 1px 2px rgba(0,0,0,.06);padding:12px 14px}
+.c{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--border);padding:14px 16px}
 .c-title{font:600 10px/1.3 inherit;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
 
-/* ═══ L3 LAYOUT ═══ */
-.l3-main{flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr;
-  gap:10px;padding:10px 14px;overflow-y:auto;min-height:0}
-.row-full{grid-column:1/-1}
+/* ═══ CIRCULAR GAUGE ═══ */
+.gauge-card{display:flex;flex-direction:column;align-items:center;flex:1;padding:14px 10px}
+.gauge-ring{position:relative;width:120px;height:120px}
+.gauge-ring svg{width:100%;height:100%}
+.gauge-ring .val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.gauge-ring .val .num{font:700 22px/1 inherit;font-variant-numeric:tabular-nums}
+.gauge-ring .val .unit{font:400 10px/1.3 inherit;color:var(--text-3)}
+.gauge-label{font:600 11px/1.3 inherit;color:var(--text-2);margin-top:6px;text-align:center}
+.gauge-sub{font:400 10px/1.3 inherit;color:var(--text-3);margin-top:2px}
+
+/* ═══ TREND CHART ═══ */
+.trend-card{flex:1;display:flex;flex-direction:column;min-width:0}
+.trend-canvas{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;min-height:80px}
+.trend-canvas svg{width:100%;height:100%}
+.trend-legend{display:flex;gap:12px;margin-top:4px;font:400 10px/1.3 inherit;color:var(--text-3)}
+.trend-legend .sw{display:inline-block;width:12px;height:3px;border-radius:2px;vertical-align:middle;margin-right:3px}
+
+/* ═══ SITE TREE ═══ */
+.tree{font-size:12px;line-height:1.6}
+.tree-item{padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;gap:6px;color:var(--text-2)}
+.tree-item:hover{background:var(--card-hover);color:var(--text)}
+.tree-item.active{background:var(--cyan-dim);color:var(--text)}
+.tree-item .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.tree-item .dot.green{background:var(--green)}.tree-item .dot.gray{background:var(--text-3)}
+.tree-item .dot.orange{background:var(--orange)}.tree-item .dot.red{background:var(--red)}
+.tree-group{font:600 10px/1.3 inherit;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;
+  padding:8px 10px 4px;margin-top:4px}
+
+/* ═══ MAP PANEL ═══ */
+.map-panel{flex:1;display:flex;flex-direction:column;min-width:0}
+.map-box{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;display:flex;align-items:center;justify-content:center}
+.map-box svg{width:100%;height:100%}
+.eq-click{cursor:pointer}
+.eq-click:hover rect,.eq-click:hover circle{stroke:var(--cyan);stroke-width:2.5}
+
+/* ═══ CONTROLS (L3) ═══ */
+.ctrl-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 14px}
+.ctrl-col{display:flex;flex-direction:column;gap:8px}
 
 /* Toggle */
 .tg-group{display:inline-flex;align-items:center;gap:8px}
-.tg-label{font:700 13px/1 inherit}
-.tg-label.a{color:var(--accent)}.tg-label.m{color:#8a3ffc}
-.tg{position:relative;width:58px;height:32px;border-radius:16px;cursor:pointer;flex-shrink:0}
-.tg .track{position:absolute;inset:0;border-radius:16px}
-.tg .thumb{position:absolute;top:3px;width:26px;height:26px;border-radius:50%;background:#fff;
-  box-shadow:0 1px 3px rgba(0,0,0,.2),0 0 0 .5px rgba(0,0,0,.04);
-  display:flex;align-items:center;justify-content:center;font:800 13px/1 inherit}
-.tg.auto .track{background:var(--toggle-auto)}.tg.auto .thumb{left:3px;color:#002d9c}
-.tg.manual .track{background:var(--toggle-man)}.tg.manual .thumb{right:3px;left:auto;color:#6929c4}
+.tg-label{font:700 12px/1 inherit}.tg-label.a{color:var(--cyan)}.tg-label.m{color:var(--purple)}
+.tg{position:relative;width:52px;height:28px;border-radius:14px;cursor:pointer;flex-shrink:0}
+.tg .track{position:absolute;inset:0;border-radius:14px}
+.tg .thumb{position:absolute;top:2px;width:24px;height:24px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font:800 11px/1 inherit}
+.tg.auto .track{background:var(--cyan-dim)}.tg.auto .thumb{left:2px;color:var(--cyan-dim)}
+.tg.manual .track{background:var(--purple-dim)}.tg.manual .thumb{right:2px;left:auto;color:var(--purple-dim)}
 
 /* Values */
-.tv-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px}
-.tv{display:flex;flex-direction:column;gap:3px}
-.tv .lb{font:400 11px/1.3 inherit;color:var(--text-3)}
-.tv .vr{display:flex;align-items:baseline;gap:3px}
-.tv .v{font:700 24px/1 inherit;color:var(--val);font-variant-numeric:tabular-nums}
-.tv .u{font:400 11px/1 inherit;color:var(--text-3)}
-.sp-dia{width:7px;height:7px;border:2px solid var(--text-2);transform:rotate(45deg);display:inline-block;margin-right:3px;position:relative;top:-1px}
-.fw{display:inline-flex;align-items:center;gap:3px;background:#fff;border-left:3px solid var(--accent);
-  border-bottom:2px solid var(--accent);border-top:1px solid var(--border);border-right:1px solid var(--border);
+.kv{display:flex;flex-direction:column;gap:2px}
+.kv .lb{font:400 10px/1.3 inherit;color:var(--text-3)}
+.kv .vr{display:flex;align-items:baseline;gap:3px}
+.kv .v{font:700 20px/1 inherit;color:var(--cyan);font-variant-numeric:tabular-nums}
+.kv .u{font:400 10px/1 inherit;color:var(--text-3)}
+.kv-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* Writable */
+.fw{display:inline-flex;align-items:center;gap:3px;background:var(--surface);
+  border-left:3px solid var(--cyan);border-bottom:2px solid var(--cyan);
+  border-top:1px solid var(--border);border-right:1px solid var(--border);
   padding:4px 8px;border-radius:2px}
-.fw .fv{font:700 20px/1 inherit;color:var(--val)}.fw .fu{font:400 11px/1 inherit;color:var(--text-3)}
+.fw .fv{font:700 16px/1 inherit;color:var(--cyan)}.fw .fu{font:400 10px/1 inherit;color:var(--text-3)}
 .stp{display:inline-flex;align-items:stretch;border-radius:4px;overflow:hidden}
-.stp .fw{border-radius:0;border-right:none;min-width:80px}
-.stp-b{display:flex;flex-direction:column;width:40px}
+.stp .fw{border-radius:0;border-right:none;min-width:70px}
+.stp-b{display:flex;flex-direction:column;width:36px}
 .stp-b button{flex:1;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);
-  border-left:none;background:var(--card);cursor:pointer;font:14px/1 inherit;color:var(--text-2);padding:0;min-height:20px}
+  border-left:none;background:var(--card);cursor:pointer;font:12px/1 inherit;color:var(--text-2);padding:0;min-height:18px}
 .stp-b button:first-child{border-bottom:none;border-radius:0 4px 0 0}
 .stp-b button:last-child{border-radius:0 0 4px 0}
-.stp-b button:hover{background:var(--border)}.stp-b button:active{background:var(--accent);color:#fff}
+.stp-b button:hover{background:var(--border)}.stp-b button:active{background:var(--cyan);color:var(--bg)}
 
-/* Gauge */
-.g-track{height:8px;background:var(--border);border-radius:4px;position:relative;margin-top:5px}
-.g-fill{height:100%;border-radius:4px 0 0 4px;background:var(--val)}
-.g-sp{position:absolute;top:-3px;width:2px;height:14px;background:var(--text-2);border-radius:1px;opacity:.6}
-.g-labels{display:flex;justify-content:space-between;font:9px/1.3 inherit;color:var(--text-3);margin-top:2px}
-.ob{display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
-.ob-track{flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden}
-.ob-fill{height:100%;background:var(--val);border-radius:4px 0 0 4px}
-
-/* Status */
-.st-ban{display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:var(--radius-sm);font:600 12px/1.3 inherit}
-.st-ban.prog{background:#d0e2ff;color:#002d9c}
-.st-ico{width:12px;height:12px;border:2px solid currentColor;border-radius:50%;position:relative}
-.st-ico::after{content:'';position:absolute;inset:1px;border:1.5px solid currentColor;border-radius:50%}
+/* Gauge bar */
+.g-track{height:6px;background:var(--border);border-radius:3px;position:relative;margin-top:4px}
+.g-fill{height:100%;border-radius:3px 0 0 3px;background:var(--cyan)}
+.g-sp{position:absolute;top:-3px;width:2px;height:12px;background:var(--text-2);border-radius:1px;opacity:.6}
 
 /* Buttons */
-.btn{padding:10px 18px;border-radius:var(--radius-sm);font:600 13px/1 inherit;cursor:pointer;border:none;min-height:46px}
-.btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:var(--accent-hover)}
-.btn-d{background:transparent;border:1px solid var(--border);color:var(--alarm-1)}.btn-d:hover{background:#fff1f1}
-.btn-s{background:transparent;border:1px solid var(--border);color:var(--text-1)}.btn-s:hover{background:var(--border)}
-.btn-row{display:flex;gap:8px}
-.fl-seg{display:inline-flex;border-radius:16px;padding:2px;background:var(--border);gap:2px;height:32px}
-.fl-seg button{padding:0 16px;font:700 12px/28px inherit;border:none;cursor:pointer;border-radius:14px;
-  background:transparent;color:var(--text-2);white-space:nowrap}
-.fl-seg button.sel{background:#fff;color:var(--text-1);box-shadow:0 1px 3px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04)}
+.btn{padding:10px 18px;border-radius:var(--radius-sm);font:600 12px/1 inherit;cursor:pointer;border:none;min-height:42px}
+.btn-p{background:var(--cyan-dim);color:var(--text)}.btn-p:hover{background:var(--cyan);color:var(--bg)}
+.btn-d{background:transparent;border:1px solid var(--border);color:var(--red)}.btn-d:hover{background:var(--red-dim)}
+.btn-s{background:transparent;border:1px solid var(--border);color:var(--text-2)}.btn-s:hover{background:var(--card)}
+.btn-row{display:flex;gap:6px}
+.fl-seg{display:inline-flex;border-radius:14px;padding:2px;background:var(--border);gap:2px;height:30px}
+.fl-seg button{padding:0 14px;font:700 11px/26px inherit;border:none;cursor:pointer;border-radius:12px;
+  background:transparent;color:var(--text-3);white-space:nowrap}
+.fl-seg button.sel{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+
+/* Status */
+.st-ban{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--radius-sm);font:600 11px/1.3 inherit}
+.st-ban.prog{background:rgba(34,211,238,.1);color:var(--cyan);border:1px solid rgba(34,211,238,.2)}
+.st-ico{width:10px;height:10px;border:2px solid currentColor;border-radius:50%}
 
 /* Permissive table */
-.pt{width:100%;border-collapse:collapse;font-size:12px}
-.pt th{text-align:left;font:600 9px/1.3 inherit;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;padding:6px 8px;border-bottom:2px solid var(--border)}
-.pt td{padding:8px;border-bottom:1px solid var(--border);vertical-align:middle}
+.pt{width:100%;border-collapse:collapse;font-size:11px}
+.pt th{text-align:left;font:600 9px/1.3 inherit;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;
+  padding:5px 6px;border-bottom:1px solid var(--border)}
+.pt td{padding:6px;border-bottom:1px solid var(--border);vertical-align:middle}
 .pt .cond{color:var(--text-2)}.pt .sc{text-align:right}
-.chip{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:100px;font:600 10px/1.3 inherit}
-.chip.ok{background:var(--ok-bg);color:var(--ok-text)}.chip.dat{background:var(--dat-bg);color:var(--dat-text);border:1px solid var(--border)}
-.chip .cd{width:5px;height:5px;border-radius:50%}.chip.ok .cd{background:var(--ok-dot)}.chip.dat .cd{background:var(--dat-dot)}
+.chip{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:100px;font:600 9px/1.3 inherit}
+.chip.ok{background:rgba(34,197,94,.12);color:var(--green)}.chip.dat{background:var(--surface);color:var(--text-3);border:1px solid var(--border)}
+.chip .cd{width:5px;height:5px;border-radius:50%}.chip.ok .cd{background:var(--green)}.chip.dat .cd{background:var(--text-3)}
 
-/* Nav bar */
-.nav{background:var(--chrome);display:flex;align-items:center;padding:4px 10px;gap:5px;border-top:1px solid #393939;flex-shrink:0;min-height:42px}
-.nav button{background:none;border:1px solid #525252;color:var(--text-inv);font:600 12px/1 inherit;
-  padding:7px 10px;border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap;flex:1;min-height:34px}
-.nav button:hover{background:#393939}
-
-/* Alarm banner */
-.ab{height:38px;background:var(--chrome);display:flex;align-items:center;padding:0 14px;gap:10px;border-top:1px solid #393939;flex-shrink:0}
-.ac{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:var(--radius-sm);font:600 11px/1 inherit}
-.ac.p2{background:var(--alarm-2);color:#161616}.ac.p3{background:var(--alarm-3);color:#161616}
-.ag{font-size:9px;font-weight:700}.ag.tri::before{content:'\25B2 '}.ag.dia::before{content:'\25C6 '}
-.ab .tm{color:#a8a8a8;font-size:10px;margin-left:auto}
-.ab .abtn{padding:5px 12px;border-radius:var(--radius-sm);font:600 11px/1 inherit;background:var(--accent);color:#fff;border:none;cursor:pointer;margin-left:auto}
-.ab .sbtn{padding:5px 12px;border-radius:var(--radius-sm);font:600 11px/1 inherit;background:transparent;color:#a8a8a8;border:1px solid #525252;cursor:pointer}
-
-/* ═══ L4 POPUP OVERLAY ═══ */
-.popup-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:10;
+/* ═══ L4 POPUP ═══ */
+.popup-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10;
   align-items:center;justify-content:center;padding:20px}
 .popup-overlay.open{display:flex}
-.popup-box{background:var(--canvas);border-radius:12px;border:1px solid var(--border);
-  box-shadow:0 8px 32px rgba(0,0,0,.2);width:580px;max-width:100%;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column}
-.popup-hdr{display:flex;align-items:center;padding:10px 16px;background:var(--chrome);border-radius:12px 12px 0 0;gap:8px}
-.popup-hdr .title{color:#fff;font:600 13px/1.2 inherit;flex:1}
-.popup-hdr .close-btn{background:none;border:1px solid #525252;color:var(--text-inv);font:600 11px/1 inherit;
-  padding:6px 14px;border-radius:var(--radius-sm);cursor:pointer}
-.popup-body{padding:12px;display:grid;grid-template-columns:1fr 220px;gap:10px}
-.popup-full{grid-column:1/-1}
-
-/* Unified gauge */
-.gauge-panel{display:flex;align-items:stretch;gap:0;flex:1;min-height:120px}
-.gauge-side{width:72px;display:flex;flex-direction:column;justify-content:flex-end;position:relative}
-.gauge-side.right{align-items:flex-start}.gauge-side.left{align-items:flex-end}
-.gauge-arrow{position:absolute;display:flex;align-items:center;gap:3px;white-space:nowrap}
-.gauge-arrow.left{right:0;flex-direction:row-reverse}.gauge-arrow.right{left:0}
-.gauge-arrow .arr-label{font:600 9px/1 inherit;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em}
-.gauge-arrow .arr-val{font:700 13px/1 inherit;font-variant-numeric:tabular-nums}
-.gauge-arrow .arr-unit{font:400 9px/1 inherit;color:var(--text-3);margin-left:1px}
-.gauge-arrow.pv-arrow .arr-val{color:var(--bar-pv)}.gauge-arrow.op-arrow .arr-val{color:var(--bar-out)}
-.arr-tri{width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent}
-.arr-tri.point-right{border-left:7px solid var(--bar-pv)}.arr-tri.point-left{border-right:7px solid var(--bar-out)}
-.gauge-center{width:40px;display:flex;flex-direction:column;align-items:center;flex-shrink:0}
-.gauge-bar-wrap{flex:1;width:34px;background:var(--border);border-radius:4px;position:relative;overflow:visible;border:1px solid var(--border)}
-.gauge-bar-fill{position:absolute;bottom:0;left:0;right:0;border-radius:0 0 3px 3px;background:var(--bar-pv);opacity:.25}
-.gauge-sp-mark{position:absolute;left:-6px;right:-6px;height:2px;background:var(--text-2);z-index:2}
-.gauge-sp-diamond{position:absolute;left:50%;top:-3px;width:6px;height:6px;border:1.5px solid var(--text-2);
-  transform:translateX(-50%) rotate(45deg);background:var(--card);z-index:3}
-
-/* PID rows */
+.popup-box{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);
+  box-shadow:0 8px 32px rgba(0,0,0,.4);width:500px;max-width:100%;max-height:80vh;overflow-y:auto}
+.popup-hdr{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);gap:8px}
+.popup-hdr .title{font:600 13px/1.2 inherit;color:var(--text);flex:1}
+.popup-hdr .close-btn{background:none;border:1px solid var(--border);color:var(--text-2);
+  font:600 11px/1 inherit;padding:5px 12px;border-radius:var(--radius-sm);cursor:pointer}
+.popup-body{padding:12px;display:grid;grid-template-columns:1fr 180px;gap:8px}
 .pid-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)}
 .pid-row:last-child{border-bottom:none}
 .pid-label{font:600 11px/1.3 inherit;color:var(--text-2)}
-.al-table{width:100%;border-collapse:collapse;font-size:11px}
-.al-table td{padding:4px 4px;border-bottom:1px solid var(--border);vertical-align:middle}
-.al-table .al-label{font:600 10px/1.3 inherit;color:var(--text-2);width:24px}
-.al-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
-.al-dot.ok{background:var(--ok-dot)}
 
-/* Breadcrumb */
-.bread{display:flex;align-items:center;gap:4px;padding:6px 14px;background:var(--card);border-bottom:1px solid var(--border);font:400 12px/1 inherit;color:var(--text-3);flex-shrink:0}
-.bread span{cursor:pointer;color:var(--accent);font-weight:600}
-.bread span:hover{text-decoration:underline}
-.bread .sep{color:var(--text-3);cursor:default;font-weight:400}
-.bread .cur{color:var(--text-1);cursor:default}
+/* Unified gauge */
+.gauge-panel{display:flex;align-items:stretch;flex:1;min-height:100px}
+.gauge-side{width:65px;display:flex;flex-direction:column;justify-content:flex-end;position:relative}
+.gauge-arrow{position:absolute;display:flex;align-items:center;gap:3px;white-space:nowrap}
+.gauge-arrow.left{right:0;flex-direction:row-reverse}.gauge-arrow.right{left:0}
+.gauge-arrow .arr-label{font:600 8px/1 inherit;color:var(--text-3);text-transform:uppercase}
+.gauge-arrow .arr-val{font:700 12px/1 inherit;font-variant-numeric:tabular-nums}
+.gauge-arrow.pv-arrow .arr-val{color:var(--cyan)}.gauge-arrow.op-arrow .arr-val{color:var(--blue)}
+.arr-tri{width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent}
+.arr-tri.pr{border-left:6px solid var(--cyan)}.arr-tri.pl{border-right:6px solid var(--blue)}
+.gauge-center{width:34px;display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.gauge-bar-wrap{flex:1;width:28px;background:var(--border);border-radius:4px;position:relative;overflow:visible}
+.gauge-bar-fill{position:absolute;bottom:0;left:0;right:0;border-radius:0 0 3px 3px;background:var(--cyan);opacity:.2}
+.gauge-sp-mark{position:absolute;left:-5px;right:-5px;height:2px;background:var(--text-2);z-index:2}
+.gauge-sp-dia{position:absolute;left:50%;top:-3px;width:6px;height:6px;border:1.5px solid var(--text-2);
+  transform:translateX(-50%) rotate(45deg);background:var(--card);z-index:3}
+.al-table{width:100%;border-collapse:collapse;font-size:10px}
+.al-table td{padding:3px 4px;border-bottom:1px solid var(--border)}
+.al-table .al-label{font:600 10px/1 inherit;color:var(--text-3);width:22px}
+.al-dot{width:7px;height:7px;border-radius:50%;display:inline-block}.al-dot.ok{background:var(--green)}
+
+/* ═══ LOWER BAR ═══ */
+.lower-bar{height:34px;background:var(--surface);border-top:1px solid var(--border);
+  display:flex;align-items:center;padding:0 14px;gap:8px;flex-shrink:0}
+.lower-bar .alarm-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;
+  border-radius:var(--radius-sm);font:600 10px/1 inherit}
+.lower-bar .alarm-chip.p2{background:rgba(249,115,22,.15);color:var(--orange);border:1px solid rgba(249,115,22,.3)}
+.lower-bar .alarm-chip.p3{background:rgba(245,158,11,.12);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+.lower-bar .tm{color:var(--text-3);font:10px/1 inherit;margin-left:auto}
+.lower-bar .abtn{padding:4px 10px;border-radius:var(--radius-sm);font:600 10px/1 inherit;
+  background:var(--cyan-dim);color:var(--text);border:none;cursor:pointer;margin-left:auto}
 </style>
 </head>
 <body>
 
-<!-- ═══ HEADER ═══ -->
-<div class="hdr">
-  <button class="hdr-btn" id="backBtn" style="display:none" onclick="goBack()">Back</button>
-  <button class="hdr-btn" onclick="goTo('l1')">Home</button>
-  <div class="title" id="hdrTitle">Site Overview <span class="tag" id="hdrTag">L1</span></div>
-  <div class="badge"><div class="dot"></div><span class="n">3</span><span class="l">Alarms</span></div>
-  <div class="clk" id="clk">14:35:42</div>
+<!-- ═══ TOP BAR ═══ -->
+<div class="topbar">
+  <div class="logo">HMI SCADA System</div>
+  <div class="sep">|</div>
+  <div class="bread" id="bread"><span class="cur">Site Overview</span></div>
+  <div class="right">
+    <div class="badge"><div class="dot"></div><span class="n">3</span> Alarms</div>
+    <div class="clk" id="clk">14:35:42</div>
+  </div>
 </div>
 
-<!-- ═══ BREADCRUMB ═══ -->
-<div class="bread" id="bread">
-  <span class="cur">Site Overview</span>
+<div class="app">
+
+<!-- ═══ SIDEBAR ═══ -->
+<div class="sidebar">
+  <button class="sb-btn active" id="sb-home" onclick="goTo('l1')" title="Site Overview">
+    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></button>
+  <button class="sb-btn" id="sb-dash" onclick="goTo('l2')" title="#3 Melter Area">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></button>
+  <button class="sb-btn" id="sb-ctrl" onclick="goTo('l3')" title="Controls">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></button>
+  <button class="sb-btn" id="sb-trend" title="Trends">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></button>
+  <button class="sb-btn" id="sb-alarm" title="Alarms">
+    <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></button>
+  <div class="sb-spacer"></div>
+  <button class="sb-btn" title="Settings">
+    <svg viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/></svg></button>
 </div>
 
-<!-- ════════════════════════════════════════ -->
-<!-- ═══ L1 — SITE OVERVIEW ═══ -->
-<!-- ════════════════════════════════════════ -->
+<div class="content">
+
+<!-- ════════════════════════════ L1 ════════════════════════════ -->
 <div class="view active" id="l1">
-  <div class="map-wrap">
-    <svg viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:900px;">
-      <!-- Background -->
-      <rect x="0" y="0" width="900" height="600" fill="var(--canvas)" rx="6"/>
-      <!-- Roads -->
-      <line x1="0" y1="140" x2="900" y2="140" stroke="var(--border)" stroke-width="3"/>
-      <line x1="0" y1="380" x2="900" y2="380" stroke="var(--border)" stroke-width="3"/>
-      <line x1="140" y1="0" x2="140" y2="600" stroke="var(--border)" stroke-width="2"/>
-      <line x1="680" y1="0" x2="680" y2="600" stroke="var(--border)" stroke-width="2"/>
-
-      <!-- REMELT RED ZONE -->
-      <rect x="160" y="20" width="500" height="110" rx="6" fill="none" stroke="var(--alarm-1)" stroke-width="1.5" stroke-dasharray="6,3" opacity=".5"/>
-      <text x="410" y="38" text-anchor="middle" font-size="10" font-weight="600" fill="var(--alarm-1)" opacity=".7">REMELT RED ZONE</text>
-      <!-- Melter circles -->
-      <circle cx="220" cy="82" r="28" fill="var(--eq-off)" stroke="var(--eq-stroke)" stroke-width="1.5"/>
-      <text x="220" y="86" text-anchor="middle" font-size="10" font-weight="600" fill="var(--text-inv)">#6</text>
-      <circle cx="300" cy="82" r="28" fill="var(--eq-off)" stroke="var(--eq-stroke)" stroke-width="1.5"/>
-      <text x="300" y="86" text-anchor="middle" font-size="10" font-weight="600" fill="var(--text-inv)">#5</text>
-      <circle cx="380" cy="82" r="28" fill="var(--eq-off)" stroke="var(--eq-stroke)" stroke-width="1.5"/>
-      <text x="380" y="86" text-anchor="middle" font-size="10" font-weight="600" fill="var(--text-inv)">#4</text>
-      <!-- #3 — clickable, running -->
-      <g class="eq-click" onclick="goTo('l2')">
-        <circle cx="460" cy="82" r="28" fill="var(--eq-on)" stroke="var(--eq-stroke)" stroke-width="1.5"/>
-        <text x="460" y="86" text-anchor="middle" font-size="10" font-weight="700" fill="var(--text-1)">#3</text>
-        <text x="460" y="122" text-anchor="middle" font-size="9" fill="var(--accent)" font-weight="600">RUNNING</text>
-      </g>
-
-      <!-- Charge Station -->
-      <rect x="20" y="20" width="100" height="40" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-      <text x="70" y="44" text-anchor="middle" font-size="9" fill="var(--text-2)">Charge Stn</text>
-      <!-- Dross -->
-      <rect x="700" y="20" width="80" height="40" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-      <text x="740" y="44" text-anchor="middle" font-size="9" fill="var(--text-2)">Dross</text>
-      <!-- Loose Scrap -->
-      <rect x="700" y="70" width="180" height="60" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-      <text x="790" y="104" text-anchor="middle" font-size="10" fill="var(--text-2)">Loose Scrap</text>
-
-      <!-- BLDG 221/222 -->
-      <rect x="20" y="150" width="300" height="80" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-      <text x="170" y="195" text-anchor="middle" font-size="11" fill="var(--text-2)">Bldg 221 / 222</text>
-
-      <!-- Mold Shop / Dry Alloy -->
-      <rect x="340" y="150" width="140" height="50" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-      <text x="410" y="180" text-anchor="middle" font-size="10" fill="var(--text-2)">Dry Alloy / Mold</text>
-      <!-- Brick Shop -->
-      <rect x="500" y="150" width="80" height="50" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-      <text x="540" y="180" text-anchor="middle" font-size="9" fill="var(--text-2)">Brick Shop</text>
-
-      <!-- BLDG 223 Press -->
-      <rect x="20" y="250" width="110" height="80" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-      <text x="75" y="275" text-anchor="middle" font-size="10" font-weight="600" fill="var(--text-2)">Bldg 223</text>
-      <text x="75" y="290" text-anchor="middle" font-size="10" fill="var(--text-3)">Press</text>
-
-      <!-- Compressed Air -->
-      <rect x="200" y="260" width="120" height="60" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-      <text x="260" y="295" text-anchor="middle" font-size="9" fill="var(--text-2)">Compressed Air</text>
-
-      <!-- Bloom Storage -->
-      <rect x="340" y="260" width="200" height="100" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-      <text x="440" y="315" text-anchor="middle" font-size="11" fill="var(--text-2)">Bloom Storage</text>
-
-      <!-- Cooling Tower -->
-      <rect x="20" y="390" width="90" height="60" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-      <text x="65" y="424" text-anchor="middle" font-size="9" fill="var(--text-2)">Cooling Tower</text>
-      <!-- Mill -->
-      <rect x="20" y="470" width="90" height="50" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-      <text x="65" y="499" text-anchor="middle" font-size="10" fill="var(--text-2)">Mill</text>
-
-      <!-- Truck Garage -->
-      <rect x="600" y="260" width="120" height="60" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-      <text x="660" y="295" text-anchor="middle" font-size="9" fill="var(--text-2)">Truck Garage</text>
-
-      <!-- Scrap -->
-      <rect x="200" y="395" width="260" height="40" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-      <text x="330" y="419" text-anchor="middle" font-size="10" fill="var(--text-2)">Scrap</text>
-
-      <!-- Bldg 228-233 -->
-      <rect x="500" y="395" width="180" height="40" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-      <text x="590" y="419" text-anchor="middle" font-size="10" fill="var(--text-2)">Bldg 228</text>
-      <rect x="500" y="445" width="180" height="40" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-      <text x="590" y="469" text-anchor="middle" font-size="10" fill="var(--text-2)">Bldg 231 / 232</text>
-
-      <!-- Bldg 234 -->
-      <rect x="300" y="510" width="260" height="50" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-      <text x="430" y="540" text-anchor="middle" font-size="10" fill="var(--text-2)">Bldg 234 &mdash; Medart #1 &amp; Finish Goods</text>
-
-      <!-- Substations -->
-      <rect x="560" y="510" width="100" height="40" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-      <text x="610" y="534" text-anchor="middle" font-size="8" fill="var(--text-3)">Sub-Station</text>
-
-      <!-- Hint -->
-      <text x="460" y="136" text-anchor="middle" font-size="10" font-style="italic" fill="var(--accent)">Click #3 to drill in</text>
-    </svg>
+  <div class="tabbar">
+    <div class="tab active">Dashboard</div><div class="tab">Alarms</div><div class="tab">History</div>
+  </div>
+  <div class="panels">
+    <!-- KPI Gauges Row -->
+    <div class="panel-row">
+      <div class="c gauge-card">
+        <div class="gauge-ring">
+          <svg viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="50" fill="none" stroke="var(--border)" stroke-width="8"/>
+            <circle cx="60" cy="60" r="50" fill="none" stroke="var(--cyan)" stroke-width="8"
+              stroke-dasharray="236" stroke-dashoffset="82" stroke-linecap="round" transform="rotate(-90 60 60)"/>
+          </svg>
+          <div class="val"><span class="num" style="color:var(--cyan)">1842</span><span class="unit">&deg;F Bath</span></div>
+        </div>
+        <div class="gauge-label">Temperature</div>
+        <div class="gauge-sub">SP 1850 &deg;F</div>
+      </div>
+      <div class="c gauge-card">
+        <div class="gauge-ring">
+          <svg viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="50" fill="none" stroke="var(--border)" stroke-width="8"/>
+            <circle cx="60" cy="60" r="50" fill="none" stroke="var(--amber)" stroke-width="8"
+              stroke-dasharray="236" stroke-dashoffset="150" stroke-linecap="round" transform="rotate(-90 60 60)"/>
+          </svg>
+          <div class="val"><span class="num" style="color:var(--amber)">62.3</span><span class="unit">% Output</span></div>
+        </div>
+        <div class="gauge-label">Combustion Air</div>
+        <div class="gauge-sub">PID Auto</div>
+      </div>
+      <div class="c gauge-card">
+        <div class="gauge-ring">
+          <svg viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="50" fill="none" stroke="var(--border)" stroke-width="8"/>
+            <circle cx="60" cy="60" r="50" fill="none" stroke="var(--green)" stroke-width="8"
+              stroke-dasharray="236" stroke-dashoffset="45" stroke-linecap="round" transform="rotate(-90 60 60)"/>
+          </svg>
+          <div class="val"><span class="num" style="color:var(--green)">65.2</span><span class="unit">GPM Flow</span></div>
+        </div>
+        <div class="gauge-label">Flow Rate</div>
+        <div class="gauge-sub">SP 72.0 GPM</div>
+      </div>
+      <!-- Map panel -->
+      <div class="c map-panel" style="flex:2;">
+        <div class="c-title">Site Map</div>
+        <div class="map-box">
+          <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+            <rect x="0" y="0" width="400" height="200" fill="var(--surface)"/>
+            <rect x="20" y="10" width="260" height="45" rx="4" fill="none" stroke="var(--red)" stroke-width="1" stroke-dasharray="4,2" opacity=".4"/>
+            <text x="150" y="22" text-anchor="middle" font-size="8" fill="var(--red)" opacity=".5">REMELT RED ZONE</text>
+            <circle cx="60" cy="38" r="14" fill="var(--text-3)" stroke="var(--border)" stroke-width="1"/><text x="60" y="42" text-anchor="middle" font-size="7" fill="var(--text)">#6</text>
+            <circle cx="110" cy="38" r="14" fill="var(--text-3)" stroke="var(--border)" stroke-width="1"/><text x="110" y="42" text-anchor="middle" font-size="7" fill="var(--text)">#5</text>
+            <circle cx="160" cy="38" r="14" fill="var(--text-3)" stroke="var(--border)" stroke-width="1"/><text x="160" y="42" text-anchor="middle" font-size="7" fill="var(--text)">#4</text>
+            <g class="eq-click" onclick="goTo('l2')">
+              <circle cx="210" cy="38" r="14" fill="var(--cyan-dim)" stroke="var(--cyan)" stroke-width="2"/>
+              <text x="210" y="42" text-anchor="middle" font-size="7" font-weight="700" fill="var(--text)">#3</text>
+            </g>
+            <rect x="20" y="65" width="120" height="35" rx="3" fill="var(--card)" stroke="var(--border)"/><text x="80" y="86" text-anchor="middle" font-size="8" fill="var(--text-3)">Bldg 221/222</text>
+            <rect x="160" y="65" width="80" height="35" rx="3" fill="var(--card)" stroke="var(--border)"/><text x="200" y="86" text-anchor="middle" font-size="8" fill="var(--text-3)">Dry Alloy</text>
+            <rect x="20" y="110" width="80" height="35" rx="3" fill="var(--card)" stroke="var(--border)"/><text x="60" y="131" text-anchor="middle" font-size="8" fill="var(--text-3)">Press 223</text>
+            <rect x="120" y="110" width="100" height="35" rx="3" fill="var(--card)" stroke="var(--border)"/><text x="170" y="131" text-anchor="middle" font-size="8" fill="var(--text-3)">Bloom Storage</text>
+            <rect x="240" y="110" width="80" height="35" rx="3" fill="var(--card)" stroke="var(--border)"/><text x="280" y="131" text-anchor="middle" font-size="8" fill="var(--text-3)">Garage</text>
+            <rect x="20" y="160" width="140" height="30" rx="3" fill="var(--card)" stroke="var(--border)"/><text x="90" y="179" text-anchor="middle" font-size="8" fill="var(--text-3)">Mill / Blooms</text>
+            <rect x="180" y="160" width="200" height="30" rx="3" fill="var(--card)" stroke="var(--border)"/><text x="280" y="179" text-anchor="middle" font-size="8" fill="var(--text-3)">Bldg 228&ndash;234</text>
+            <text x="210" y="57" text-anchor="middle" font-size="7" font-style="italic" fill="var(--cyan)">Click #3</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <!-- Trend Row -->
+    <div class="panel-row stretch">
+      <div class="c trend-card" style="flex:3">
+        <div class="c-title">Key Parameters &mdash; 24h</div>
+        <div class="trend-canvas">
+          <svg viewBox="0 0 600 100" preserveAspectRatio="none">
+            <line x1="0" y1="30" x2="600" y2="30" stroke="var(--border)" stroke-width=".5" stroke-dasharray="4,3"/>
+            <line x1="0" y1="60" x2="600" y2="60" stroke="var(--border)" stroke-width=".5" stroke-dasharray="4,3"/>
+            <polyline fill="none" stroke="var(--cyan)" stroke-width="1.5" points="0,35 30,32 60,38 90,30 120,28 150,34 180,36 210,29 240,26 270,30 300,33 330,28 360,25 390,30 420,35 450,32 480,28 510,30 540,34 570,36 600,32"/>
+            <polyline fill="none" stroke="var(--amber)" stroke-width="1.5" points="0,55 30,58 60,52 90,56 120,60 150,54 180,50 210,56 240,62 270,58 300,53 330,56 360,60 390,55 420,50 450,54 480,58 510,56 540,52 570,55 600,57"/>
+            <polyline fill="none" stroke="var(--green)" stroke-width="1.5" points="0,70 30,68 60,72 90,66 120,64 150,68 180,70 210,65 240,62 270,66 300,70 330,67 360,63 390,65 420,68 450,72 480,68 510,65 540,70 570,72 600,68"/>
+          </svg>
+        </div>
+        <div class="trend-legend">
+          <span><span class="sw" style="background:var(--cyan)"></span>Temperature</span>
+          <span><span class="sw" style="background:var(--amber)"></span>Comb. Air</span>
+          <span><span class="sw" style="background:var(--green)"></span>Flow</span>
+        </div>
+      </div>
+      <!-- Site Tree -->
+      <div class="c" style="width:200px;overflow-y:auto;flex-shrink:0;padding:10px">
+        <div class="c-title">Equipment</div>
+        <div class="tree">
+          <div class="tree-group">Remelt Zone</div>
+          <div class="tree-item" onclick="goTo('l2')"><span class="dot green"></span>#3 Melter</div>
+          <div class="tree-item"><span class="dot green"></span>#3 Holder</div>
+          <div class="tree-item"><span class="dot gray"></span>#4 Melter</div>
+          <div class="tree-item"><span class="dot gray"></span>#5 Melter</div>
+          <div class="tree-item"><span class="dot gray"></span>#6 Melter</div>
+          <div class="tree-group">Utilities</div>
+          <div class="tree-item"><span class="dot green"></span>Compressed Air</div>
+          <div class="tree-item"><span class="dot green"></span>Cooling Tower</div>
+          <div class="tree-item"><span class="dot orange"></span>Gas Supply</div>
+          <div class="tree-group">Downstream</div>
+          <div class="tree-item"><span class="dot green"></span>Casting</div>
+          <div class="tree-item"><span class="dot green"></span>Mold Table</div>
+          <div class="tree-item"><span class="dot gray"></span>Press</div>
+          <div class="tree-item"><span class="dot green"></span>Mill</div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════ -->
-<!-- ═══ L2 — MELTER #3 AREA ═══ -->
-<!-- ════════════════════════════════════════ -->
+<!-- ════════════════════════════ L2 ════════════════════════════ -->
 <div class="view" id="l2">
-  <div class="map-wrap">
-    <svg viewBox="0 0 800 520" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:800px;">
-      <rect x="0" y="0" width="800" height="520" fill="var(--canvas)" rx="6"/>
-
-      <!-- #3 MELTER (circle, top-left) — clickable -->
-      <g class="eq-click" onclick="goTo('l3')">
-        <circle cx="180" cy="120" r="80" fill="var(--eq-on)" stroke="var(--eq-stroke)" stroke-width="2"/>
-        <text x="180" y="115" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text-1)">#3 MELTER</text>
-        <text x="180" y="134" text-anchor="middle" font-size="10" fill="var(--accent)">1842 &deg;F</text>
-      </g>
-      <!-- CALP sensors on melter -->
-      <rect x="68" y="38" width="36" height="16" rx="3" fill="var(--alarm-3)" opacity=".8"/>
-      <text x="86" y="50" text-anchor="middle" font-size="8" font-weight="600" fill="var(--text-1)">CALP</text>
-      <rect x="260" y="62" width="36" height="16" rx="3" fill="var(--alarm-3)" opacity=".8"/>
-      <text x="278" y="74" text-anchor="middle" font-size="8" font-weight="600" fill="var(--text-1)">CALP</text>
-
-      <!-- Stack -->
-      <rect x="80" y="220" width="80" height="36" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1.5"/>
-      <text x="120" y="242" text-anchor="middle" font-size="10" font-weight="600" fill="var(--text-2)">STACK</text>
-      <!-- Stack wavy line -->
-      <path d="M 120 210 Q 125 200 130 210 Q 135 220 140 210" fill="none" stroke="var(--text-3)" stroke-width="1.5"/>
-
-      <!-- CALP on stack line -->
-      <rect x="200" y="218" width="36" height="16" rx="3" fill="var(--alarm-3)" opacity=".8"/>
-      <text x="218" y="230" text-anchor="middle" font-size="8" font-weight="600" fill="var(--text-1)">CALP</text>
-
-      <!-- Burner / combustion line from melter to stack -->
-      <line x1="180" y1="200" x2="180" y2="230" stroke="var(--text-1)" stroke-width="3"/>
-      <line x1="160" y1="230" x2="260" y2="230" stroke="var(--text-1)" stroke-width="3"/>
-
-      <!-- Combustion blower circle -->
-      <circle cx="290" cy="230" r="16" fill="var(--eq-on)" stroke="var(--eq-stroke)" stroke-width="1.5"/>
-      <text x="290" y="234" text-anchor="middle" font-size="8" font-weight="600" fill="var(--text-1)">BLR</text>
-
-      <!-- Gas Pressure Switches (LGPS / HGPS) -->
-      <rect x="80" y="290" width="250" height="36" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1.5"/>
-      <text x="110" y="312" text-anchor="middle" font-size="9" font-weight="600" fill="var(--text-2)">LGPS</text>
-      <!-- Valve symbols -->
-      <polygon points="150,298 162,310 150,322" fill="var(--eq-off)" stroke="var(--eq-stroke)" stroke-width="1"/>
-      <polygon points="174,298 162,310 174,322" fill="var(--eq-off)" stroke="var(--eq-stroke)" stroke-width="1"/>
-      <text x="168" y="296" text-anchor="middle" font-size="8" fill="var(--text-3)">M</text>
-      <polygon points="210,298 222,310 210,322" fill="var(--eq-off)" stroke="var(--eq-stroke)" stroke-width="1"/>
-      <polygon points="234,298 222,310 234,322" fill="var(--eq-off)" stroke="var(--eq-stroke)" stroke-width="1"/>
-      <text x="222" y="296" text-anchor="middle" font-size="8" fill="var(--text-3)">M</text>
-      <text x="300" y="312" text-anchor="middle" font-size="9" font-weight="600" fill="var(--text-2)">HGPS</text>
-
-      <!-- Argon / Chlorine -->
-      <rect x="410" y="170" width="120" height="50" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1.5"/>
-      <text x="440" y="192" font-size="10" font-weight="600" fill="var(--text-2)">ARGON</text>
-      <text x="440" y="208" font-size="10" font-weight="600" fill="var(--text-2)">CHLORINE</text>
-      <line x1="310" y1="230" x2="410" y2="200" stroke="var(--text-1)" stroke-width="2"/>
-
-      <!-- Old Stack -->
-      <rect x="560" y="170" width="70" height="40" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1.5"/>
-      <text x="595" y="194" text-anchor="middle" font-size="9" fill="var(--text-2)">OLD STACK</text>
-
-      <!-- #3 HOLDER (rectangle) — clickable -->
-      <g class="eq-click" onclick="goTo('l3')">
-        <rect x="80" y="360" width="180" height="130" rx="6" fill="var(--eq-on)" stroke="var(--eq-stroke)" stroke-width="2"/>
-        <text x="170" y="420" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text-1)">#3 HOLDER</text>
-        <text x="170" y="440" text-anchor="middle" font-size="10" fill="var(--accent)">1726 &deg;F</text>
-      </g>
-      <!-- CALP on holder -->
-      <rect x="62" y="360" width="36" height="16" rx="3" fill="var(--alarm-3)" opacity=".8"/>
-      <text x="80" y="372" text-anchor="middle" font-size="8" font-weight="600" fill="var(--text-1)">CALP</text>
-      <rect x="62" y="478" width="36" height="16" rx="3" fill="var(--alarm-3)" opacity=".8"/>
-      <text x="80" y="490" text-anchor="middle" font-size="8" font-weight="600" fill="var(--text-1)">CALP</text>
-
-      <!-- Holder burner -->
-      <circle cx="320" cy="420" r="16" fill="var(--eq-on)" stroke="var(--eq-stroke)" stroke-width="1.5"/>
-      <text x="320" y="424" text-anchor="middle" font-size="8" font-weight="600" fill="var(--text-1)">BLR</text>
-      <line x1="260" y1="420" x2="304" y2="420" stroke="var(--text-1)" stroke-width="3"/>
-
-      <!-- Tap Plate -->
-      <text x="280" y="490" font-size="9" fill="var(--text-3)">TAP PLATE</text>
-      <line x1="260" y1="470" x2="340" y2="470" stroke="var(--text-1)" stroke-width="2" stroke-dasharray="4,2"/>
-
-      <!-- Elec Panels -->
-      <rect x="380" y="280" width="70" height="30" rx="3" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-      <text x="415" y="299" text-anchor="middle" font-size="8" fill="var(--text-3)">ELEC PANEL</text>
-      <rect x="380" y="320" width="70" height="30" rx="3" fill="var(--card)" stroke="var(--border)" stroke-width="1"/>
-      <text x="415" y="339" text-anchor="middle" font-size="8" fill="var(--text-3)">ELEC PANEL</text>
-
-      <!-- Casting / Injector area -->
-      <rect x="470" y="360" width="120" height="80" rx="4" fill="var(--card)" stroke="var(--border)" stroke-width="1.5"/>
-      <text x="530" y="395" text-anchor="middle" font-size="10" font-weight="600" fill="var(--text-2)">CASTING</text>
-      <text x="530" y="412" text-anchor="middle" font-size="9" fill="var(--text-3)">Injector Pumps</text>
-      <line x1="336" y1="420" x2="470" y2="420" stroke="var(--text-1)" stroke-width="2"/>
-
-      <!-- Mold table (right) -->
-      <rect x="620" y="340" width="130" height="130" rx="6" fill="var(--card)" stroke="var(--border)" stroke-width="1.5"/>
-      <text x="685" y="370" text-anchor="middle" font-size="10" font-weight="600" fill="var(--text-2)">MOLD TABLE</text>
-      <!-- Mold circles -->
-      <circle cx="655" cy="400" r="10" fill="none" stroke="var(--eq-stroke)" stroke-width="1.5"/>
-      <circle cx="685" cy="400" r="10" fill="none" stroke="var(--eq-stroke)" stroke-width="1.5"/>
-      <circle cx="715" cy="400" r="10" fill="none" stroke="var(--eq-stroke)" stroke-width="1.5"/>
-      <circle cx="655" cy="430" r="10" fill="none" stroke="var(--eq-stroke)" stroke-width="1.5"/>
-      <circle cx="685" cy="430" r="10" fill="none" stroke="var(--eq-stroke)" stroke-width="1.5"/>
-      <circle cx="715" cy="430" r="10" fill="none" stroke="var(--eq-stroke)" stroke-width="1.5"/>
-      <circle cx="655" cy="460" r="10" fill="none" stroke="var(--eq-stroke)" stroke-width="1.5"/>
-      <circle cx="685" cy="460" r="10" fill="none" stroke="var(--eq-stroke)" stroke-width="1.5"/>
-      <line x1="590" y1="410" x2="620" y2="410" stroke="var(--text-1)" stroke-width="2"/>
-
-      <!-- Hint -->
-      <text x="180" y="155" text-anchor="middle" font-size="10" font-style="italic" fill="var(--accent)">Click to open controls</text>
-    </svg>
+  <div class="tabbar">
+    <div class="tab active">Equipment</div><div class="tab">Trends</div><div class="tab">Alarms</div>
+  </div>
+  <div class="panels">
+    <div class="panel-row">
+      <div class="c gauge-card">
+        <div class="gauge-ring">
+          <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="var(--border)" stroke-width="8"/>
+            <circle cx="60" cy="60" r="50" fill="none" stroke="var(--cyan)" stroke-width="8" stroke-dasharray="236" stroke-dashoffset="82" stroke-linecap="round" transform="rotate(-90 60 60)"/></svg>
+          <div class="val"><span class="num" style="color:var(--cyan)">1842</span><span class="unit">&deg;F</span></div>
+        </div>
+        <div class="gauge-label">Melter Bath</div>
+      </div>
+      <div class="c gauge-card">
+        <div class="gauge-ring">
+          <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="var(--border)" stroke-width="8"/>
+            <circle cx="60" cy="60" r="50" fill="none" stroke="var(--purple)" stroke-width="8" stroke-dasharray="236" stroke-dashoffset="100" stroke-linecap="round" transform="rotate(-90 60 60)"/></svg>
+          <div class="val"><span class="num" style="color:var(--purple)">1726</span><span class="unit">&deg;F</span></div>
+        </div>
+        <div class="gauge-label">Holder</div>
+      </div>
+      <div class="c gauge-card">
+        <div class="gauge-ring">
+          <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="var(--border)" stroke-width="8"/>
+            <circle cx="60" cy="60" r="50" fill="none" stroke="var(--amber)" stroke-width="8" stroke-dasharray="236" stroke-dashoffset="150" stroke-linecap="round" transform="rotate(-90 60 60)"/></svg>
+          <div class="val"><span class="num" style="color:var(--amber)">62.3</span><span class="unit">%</span></div>
+        </div>
+        <div class="gauge-label">Combustion Air</div>
+      </div>
+      <div class="c gauge-card">
+        <div class="gauge-ring">
+          <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="var(--border)" stroke-width="8"/>
+            <circle cx="60" cy="60" r="50" fill="none" stroke="var(--green)" stroke-width="8" stroke-dasharray="236" stroke-dashoffset="45" stroke-linecap="round" transform="rotate(-90 60 60)"/></svg>
+          <div class="val"><span class="num" style="color:var(--green)">65.2</span><span class="unit">GPM</span></div>
+        </div>
+        <div class="gauge-label">Flow</div>
+      </div>
+    </div>
+    <!-- Equipment area map -->
+    <div class="panel-row stretch">
+      <div class="c" style="flex:1;display:flex;flex-direction:column">
+        <div class="c-title">#3 Melter Area</div>
+        <div class="map-box" style="flex:1">
+          <svg viewBox="0 0 500 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+            <rect x="0" y="0" width="500" height="300" fill="var(--surface)"/>
+            <g class="eq-click" onclick="goTo('l3')">
+              <circle cx="120" cy="80" r="50" fill="var(--card)" stroke="var(--cyan)" stroke-width="2"/>
+              <text x="120" y="75" text-anchor="middle" font-size="10" font-weight="700" fill="var(--text)">#3 MELTER</text>
+              <text x="120" y="92" text-anchor="middle" font-size="9" fill="var(--cyan)">1842 &deg;F</text>
+            </g>
+            <rect x="45" y="20" width="28" height="12" rx="2" fill="var(--amber)" opacity=".7"/><text x="59" y="30" text-anchor="middle" font-size="7" fill="var(--bg)">CALP</text>
+            <line x1="120" y1="130" x2="120" y2="155" stroke="var(--text-3)" stroke-width="2"/>
+            <line x1="100" y1="155" x2="200" y2="155" stroke="var(--text-3)" stroke-width="2"/>
+            <rect x="50" y="145" width="50" height="22" rx="3" fill="var(--card)" stroke="var(--border)"/><text x="75" y="160" text-anchor="middle" font-size="8" fill="var(--text-2)">STACK</text>
+            <circle cx="210" cy="155" r="12" fill="var(--card)" stroke="var(--border)"/><text x="210" y="159" text-anchor="middle" font-size="7" fill="var(--text-2)">BLR</text>
+            <rect x="50" y="185" width="140" height="22" rx="3" fill="var(--card)" stroke="var(--border)"/>
+            <text x="80" y="200" font-size="8" fill="var(--text-2)">LGPS</text><text x="170" y="200" font-size="8" fill="var(--text-2)">HGPS</text>
+            <g class="eq-click" onclick="goTo('l3')">
+              <rect x="50" y="220" width="120" height="70" rx="4" fill="var(--card)" stroke="var(--purple)" stroke-width="2"/>
+              <text x="110" y="255" text-anchor="middle" font-size="10" font-weight="700" fill="var(--text)">#3 HOLDER</text>
+              <text x="110" y="272" text-anchor="middle" font-size="9" fill="var(--purple)">1726 &deg;F</text>
+            </g>
+            <rect x="270" y="115" width="80" height="34" rx="3" fill="var(--card)" stroke="var(--border)"/>
+            <text x="310" y="133" text-anchor="middle" font-size="8" fill="var(--text-2)">ARGON</text><text x="310" y="144" text-anchor="middle" font-size="8" fill="var(--text-2)">CHLORINE</text>
+            <rect x="370" y="115" width="50" height="34" rx="3" fill="var(--card)" stroke="var(--border)"/><text x="395" y="136" text-anchor="middle" font-size="7" fill="var(--text-3)">OLD STK</text>
+            <rect x="270" y="220" width="80" height="50" rx="3" fill="var(--card)" stroke="var(--border)"/>
+            <text x="310" y="245" text-anchor="middle" font-size="9" fill="var(--text-2)">CASTING</text><text x="310" y="258" text-anchor="middle" font-size="7" fill="var(--text-3)">Injectors</text>
+            <line x1="170" y1="260" x2="270" y2="250" stroke="var(--text-3)" stroke-width="1.5"/>
+            <rect x="380" y="210" width="90" height="70" rx="3" fill="var(--card)" stroke="var(--border)"/>
+            <text x="425" y="235" text-anchor="middle" font-size="9" fill="var(--text-2)">MOLD</text><text x="425" y="248" text-anchor="middle" font-size="9" fill="var(--text-2)">TABLE</text>
+            <circle cx="405" y="265" r="6" fill="none" stroke="var(--border)"/><circle cx="425" cy="265" r="6" fill="none" stroke="var(--border)"/><circle cx="445" cy="265" r="6" fill="none" stroke="var(--border)"/>
+            <line x1="350" y1="250" x2="380" y2="250" stroke="var(--text-3)" stroke-width="1.5"/>
+            <text x="120" y="140" text-anchor="middle" font-size="8" font-style="italic" fill="var(--cyan)">Click to control</text>
+          </svg>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════ -->
-<!-- ═══ L3 — CONTROL SCREEN ═══ -->
-<!-- ════════════════════════════════════════ -->
+<!-- ════════════════════════════ L3 ════════════════════════════ -->
 <div class="view" id="l3">
-  <div class="l3-main">
-    <div class="row-full" style="display:flex;align-items:center;gap:12px;">
-      <div class="st-ban prog"><div class="st-ico"></div>Burner Check In Progress</div>
-      <div style="flex:1"></div>
-      <div class="tg-group">
-        <span class="tg-label a">Auto</span>
-        <div class="tg manual" id="mTg" onclick="tgMode()"><div class="track"></div><div class="thumb">M</div></div>
-        <span class="tg-label m">Manual</span>
-      </div>
-    </div>
-
-    <div class="c row-full" style="padding:14px 16px;">
-      <div class="c-title">Temperature (Batch)</div>
-      <div class="tv-grid">
-        <div class="tv"><div class="lb"><span class="sp-dia"></span>Temperature SP</div>
-          <div class="vr"><div class="stp"><span class="fw"><span class="fv" id="spV">1850</span><span class="fu">&deg;F</span></span>
-            <div class="stp-b"><button onclick="adjSP(10)">&#9650;</button><button onclick="adjSP(-10)">&#9660;</button></div></div></div></div>
-        <div class="tv"><div class="lb">Bath Temperature</div><div class="vr"><span class="v">1842</span><span class="u">&deg;F</span></div>
-          <div class="g-track"><div class="g-fill" style="width:85%"></div><div class="g-sp" style="left:87%"></div></div>
-          <div class="g-labels"><span>1400</span><span>2100</span></div></div>
-        <div class="tv"><div class="lb">Breech Temperature</div><div class="vr"><span class="v">1726</span><span class="u">&deg;F</span></div>
-          <div class="g-track"><div class="g-fill" style="width:72%"></div></div>
-          <div class="g-labels"><span>1200</span><span>1900</span></div></div>
-        <div class="tv"><div class="lb">Combustion Air Output</div><div class="vr"><span class="v" style="font-size:20px">62.3</span><span class="u">%</span></div>
-          <div class="g-track"><div class="g-fill" style="width:62%"></div></div></div>
-      </div>
-    </div>
-
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      <div class="c"><div class="c-title">Purge Sequence</div>
-        <div class="btn-row"><button class="btn btn-p" style="flex:1">Start Purge</button><button class="btn btn-d" style="flex:1">Stop Purge</button></div></div>
-      <div class="c"><div class="c-title">Ignition Sequence</div>
-        <div class="btn-row"><button class="btn btn-p" style="flex:1">Start Ignition</button><button class="btn btn-d" style="flex:1">Stop Ignition</button></div></div>
-      <div class="c"><div class="c-title">Flame Control</div>
-        <div class="fl-seg" id="flSeg"><button class="sel" onclick="selFl(this)">Auto</button><button onclick="selFl(this)">Low</button><button onclick="selFl(this)">Flux</button></div></div>
-      <div class="c"><div class="c-title">Flow Loop</div>
-        <button class="btn btn-s" style="width:100%" onclick="openPopup()">Open PID Faceplate &#8250;</button></div>
-    </div>
-
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      <div class="c" style="flex:1"><div class="c-title">Purge Permissives</div>
-        <table class="pt"><thead><tr><th>Condition</th><th style="text-align:right">Status</th></tr></thead><tbody>
-          <tr><td class="cond">High Gas Flow Limit</td><td class="sc"><span class="chip ok"><span class="cd"></span>OK</span></td></tr>
-          <tr><td class="cond">Stack Damper Position</td><td class="sc"><span class="chip ok"><span class="cd"></span>OK</span></td></tr>
-          <tr><td class="cond">Comb. Air Blower Press.</td><td class="sc"><span class="chip ok"><span class="cd"></span>OK</span></td></tr>
-          <tr><td class="cond">Burner Components</td><td class="sc"><span class="chip dat"><span class="cd"></span>DAT</span></td></tr>
-          <tr><td class="cond">Breech Temperature</td><td class="sc"><span class="chip dat"><span class="cd"></span>DAT</span></td></tr>
-          <tr><td class="cond">Flame Relays</td><td class="sc"><span class="chip ok"><span class="cd"></span>OK</span></td></tr>
-          <tr><td class="cond">Main Gas Valves Shut</td><td class="sc"><span class="chip ok"><span class="cd"></span>OK</span></td></tr>
-        </tbody></table></div>
-      <div class="c"><div class="c-title">Ignition Permissives</div>
-        <table class="pt"><thead><tr><th>Condition</th><th style="text-align:right">Status</th></tr></thead><tbody>
-          <tr><td class="cond">Purge Complete</td><td class="sc"><span class="chip ok"><span class="cd"></span>OK</span></td></tr>
-          <tr><td class="cond">High Gas Pressure</td><td class="sc"><span class="chip ok"><span class="cd"></span>OK</span></td></tr>
-          <tr><td class="cond">Low Gas Pressure</td><td class="sc"><span class="chip ok"><span class="cd"></span>OK</span></td></tr>
-          <tr><td class="cond">Comb. Air Blower Press.</td><td class="sc"><span class="chip ok"><span class="cd"></span>OK</span></td></tr>
-          <tr><td class="cond">Flame Relays</td><td class="sc"><span class="chip ok"><span class="cd"></span>OK</span></td></tr>
-        </tbody></table></div>
-    </div>
+  <div class="tabbar">
+    <div class="tab active">Controls</div><div class="tab">Trends</div><div class="tab">Diagnostics</div>
   </div>
-
-  <div class="nav">
-    <button onclick="goTo('l1')">Main Menu</button>
-    <button onclick="goTo('l2')">#3 Area</button>
-    <button>Holder Ops</button>
-    <button>Motor Controls</button>
-    <button>Comb. Air PID</button>
-    <button>Stack Damper</button>
-    <button onclick="openPopup()">Flow Loop</button>
-    <button>Alarms</button>
+  <div class="panels">
+    <div class="panel-row">
+      <div class="c" style="flex:1;display:flex;align-items:center;gap:14px">
+        <div class="st-ban prog"><div class="st-ico"></div>Burner Check In Progress</div>
+        <div style="flex:1"></div>
+        <div class="tg-group">
+          <span class="tg-label a">Auto</span>
+          <div class="tg manual" id="mTg" onclick="tgMode()"><div class="track"></div><div class="thumb">M</div></div>
+          <span class="tg-label m">Manual</span>
+        </div>
+      </div>
+    </div>
+    <div class="panel-row">
+      <!-- Temp SP -->
+      <div class="c" style="flex:1"><div class="c-title">Temperature SP</div>
+        <div class="stp"><span class="fw"><span class="fv" id="spV">1850</span><span class="fu">&deg;F</span></span>
+          <div class="stp-b"><button onclick="adjSP(10)">&#9650;</button><button onclick="adjSP(-10)">&#9660;</button></div></div></div>
+      <!-- Bath -->
+      <div class="c" style="flex:1"><div class="c-title">Bath Temperature</div>
+        <div class="kv"><div class="vr"><span class="v">1842</span><span class="u">&deg;F</span></div>
+        <div class="g-track"><div class="g-fill" style="width:85%"></div><div class="g-sp" style="left:87%"></div></div></div></div>
+      <!-- Breech -->
+      <div class="c" style="flex:1"><div class="c-title">Breech Temperature</div>
+        <div class="kv"><div class="vr"><span class="v">1726</span><span class="u">&deg;F</span></div>
+        <div class="g-track"><div class="g-fill" style="width:72%"></div></div></div></div>
+      <!-- Comb Air -->
+      <div class="c" style="flex:1"><div class="c-title">Combustion Air</div>
+        <div class="kv"><div class="vr"><span class="v" style="color:var(--amber)">62.3</span><span class="u">%</span></div>
+        <div class="g-track"><div class="g-fill" style="width:62%;background:var(--amber)"></div></div></div></div>
+    </div>
+    <div class="ctrl-grid">
+      <div class="ctrl-col">
+        <div class="c"><div class="c-title">Purge Sequence</div>
+          <div class="btn-row"><button class="btn btn-p" style="flex:1">Start Purge</button><button class="btn btn-d" style="flex:1">Stop Purge</button></div></div>
+        <div class="c"><div class="c-title">Ignition Sequence</div>
+          <div class="btn-row"><button class="btn btn-p" style="flex:1">Start Ignition</button><button class="btn btn-d" style="flex:1">Stop Ignition</button></div></div>
+        <div class="c"><div class="c-title">Flame Control</div>
+          <div class="fl-seg" id="flSeg"><button class="sel" onclick="selFl(this)">Auto</button><button onclick="selFl(this)">Low</button><button onclick="selFl(this)">Flux</button></div></div>
+        <div class="c"><div class="c-title">Flow Loop</div>
+          <button class="btn btn-s" style="width:100%" onclick="openPopup()">Open PID Faceplate &#8250;</button></div>
+      </div>
+      <div class="ctrl-col">
+        <div class="c" style="flex:1"><div class="c-title">Purge Permissives</div>
+          <table class="pt"><thead><tr><th>Condition</th><th style="text-align:right">Status</th></tr></thead><tbody>
+            <tr><td class="cond">High Gas Flow Limit</td><td class="sc"><span class="chip ok"><span class="cd"></span>OK</span></td></tr>
+            <tr><td class="cond">Stack Damper Position</td><td class="sc"><span class="chip ok"><span class="cd"></span>OK</span></td></tr>
+            <tr><td class="cond">Comb. Air Blower</td><td class="sc"><span class="chip ok"><span class="cd"></span>OK</span></td></tr>
+            <tr><td class="cond">Burner Components</td><td class="sc"><span class="chip dat"><span class="cd"></span>DAT</span></td></tr>
+            <tr><td class="cond">Breech Temperature</td><td class="sc"><span class="chip dat"><span class="cd"></span>DAT</span></td></tr>
+            <tr><td class="cond">Flame Relays</td><td class="sc"><span class="chip ok"><span class="cd"></span>OK</span></td></tr>
+          </tbody></table></div>
+        <div class="c"><div class="c-title">Ignition Permissives</div>
+          <table class="pt"><thead><tr><th>Condition</th><th style="text-align:right">Status</th></tr></thead><tbody>
+            <tr><td class="cond">Purge Complete</td><td class="sc"><span class="chip ok"><span class="cd"></span>OK</span></td></tr>
+            <tr><td class="cond">High Gas Pressure</td><td class="sc"><span class="chip ok"><span class="cd"></span>OK</span></td></tr>
+            <tr><td class="cond">Low Gas Pressure</td><td class="sc"><span class="chip ok"><span class="cd"></span>OK</span></td></tr>
+            <tr><td class="cond">Comb. Air Blower</td><td class="sc"><span class="chip ok"><span class="cd"></span>OK</span></td></tr>
+            <tr><td class="cond">Flame Relays</td><td class="sc"><span class="chip ok"><span class="cd"></span>OK</span></td></tr>
+          </tbody></table></div>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- ═══ ALARM BANNER (L3 only shown via nav) ═══ -->
+</div><!-- content -->
+</div><!-- app -->
 
-<!-- ════════════════════════════════════════ -->
-<!-- ═══ L4 — PID POPUP ═══ -->
-<!-- ════════════════════════════════════════ -->
+<!-- Lower alarm bar -->
+<div class="lower-bar">
+  <div class="alarm-chip p2">&#9650; 2 &nbsp;Breech Temp Hi &mdash; 1726 &deg;F</div>
+  <div class="alarm-chip p3">&#9670; 3 &nbsp;Comb. Air Hi &mdash; 62.3%</div>
+  <span class="tm" id="almTime">14:32:18</span>
+  <button class="abtn">Ack All</button>
+</div>
+
+<!-- ═══ L4 PID POPUP ═══ -->
 <div class="popup-overlay" id="pidPopup" onclick="if(event.target===this)closePopup()">
   <div class="popup-box">
     <div class="popup-hdr">
-      <div class="title">WP 1S Flow Loop <span class="tag" style="font-size:9px;color:#8d8d8d;margin-left:4px">L4 &middot; PID</span></div>
+      <div class="title">WP 1S Flow Loop &mdash; PID</div>
       <div class="tg-group" style="margin:0">
-        <span class="tg-label a" style="font-size:11px">Auto</span>
-        <div class="tg auto" id="pidTg" onclick="tgPID()" style="width:46px;height:24px;border-radius:12px">
-          <div class="track"></div><div class="thumb" style="top:2px;width:20px;height:20px;font-size:10px">A</div>
-        </div>
-        <span class="tg-label m" style="font-size:11px">Manual</span>
+        <span class="tg-label a" style="font-size:10px">Auto</span>
+        <div class="tg auto" id="pidTg" onclick="tgPID()" style="width:42px;height:22px;border-radius:11px">
+          <div class="track"></div><div class="thumb" style="top:2px;width:18px;height:18px;font-size:9px">A</div></div>
+        <span class="tg-label m" style="font-size:10px">Manual</span>
       </div>
       <button class="close-btn" onclick="closePopup()">Close</button>
     </div>
     <div class="popup-body">
-      <!-- Gauge -->
-      <div class="c" style="display:flex;flex-direction:column;padding:10px 8px">
+      <div class="c" style="display:flex;flex-direction:column;padding:10px 6px">
         <div class="c-title">Process &mdash; GPM</div>
         <div class="gauge-panel">
-          <div class="gauge-side left">
-            <div class="gauge-arrow left pv-arrow" style="bottom:65%">
-              <div class="arr-tri point-right"></div>
-              <div><div class="arr-label">PV</div><div><span class="arr-val" style="color:var(--bar-pv)">65.2</span><span class="arr-unit">GPM</span></div></div>
-            </div>
+          <div class="gauge-side" style="align-items:flex-end">
+            <div class="gauge-arrow left pv-arrow" style="bottom:65%;right:0;flex-direction:row-reverse">
+              <div class="arr-tri pr"></div><div><div class="arr-label">PV</div><div><span class="arr-val" style="color:var(--cyan)">65.2</span></div></div></div>
           </div>
-          <div class="gauge-center">
-            <div class="gauge-bar-wrap">
-              <div class="gauge-bar-fill" style="height:65%"></div>
-              <div class="gauge-sp-mark" style="bottom:72%"><div class="gauge-sp-diamond"></div></div>
-            </div>
-            <div style="margin-top:6px;text-align:center">
-              <div style="font:600 8px/1.3 inherit;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">SP</div>
-              <div style="font:700 13px/1 inherit;color:var(--val)">72.0</div>
-            </div>
-          </div>
-          <div class="gauge-side right">
-            <div class="gauge-arrow right op-arrow" style="bottom:48%">
-              <div class="arr-tri point-left"></div>
-              <div><div class="arr-label">OP</div><div><span class="arr-val" style="color:var(--bar-out)">48</span><span class="arr-unit">%</span></div></div>
-            </div>
+          <div class="gauge-center"><div class="gauge-bar-wrap"><div class="gauge-bar-fill" style="height:65%"></div>
+            <div class="gauge-sp-mark" style="bottom:72%"><div class="gauge-sp-dia"></div></div></div>
+            <div style="margin-top:4px;text-align:center;font:700 11px/1 inherit;color:var(--text-2)">SP 72</div></div>
+          <div class="gauge-side" style="align-items:flex-start">
+            <div class="gauge-arrow right op-arrow" style="bottom:48%;left:0">
+              <div class="arr-tri pl"></div><div><div class="arr-label">OP</div><div><span class="arr-val" style="color:var(--blue)">48%</span></div></div></div>
           </div>
         </div>
       </div>
-      <!-- Right: Alarms + PID -->
       <div style="display:flex;flex-direction:column;gap:6px">
-        <div class="c" style="padding:8px 10px"><div class="c-title">Alarm Limits</div>
+        <div class="c" style="padding:8px"><div class="c-title">Alarms</div>
           <table class="al-table">
-            <tr><td class="al-label">HH</td><td style="text-align:right;font:700 12px/1 inherit;color:var(--val)">95.0</td><td style="width:20px;text-align:center"><span class="al-dot ok"></span></td></tr>
-            <tr><td class="al-label">H</td><td style="text-align:right;font:700 12px/1 inherit;color:var(--val)">85.0</td><td style="width:20px;text-align:center"><span class="al-dot ok"></span></td></tr>
-            <tr><td class="al-label">L</td><td style="text-align:right;font:700 12px/1 inherit;color:var(--val)">20.0</td><td style="width:20px;text-align:center"><span class="al-dot ok"></span></td></tr>
-            <tr><td class="al-label">LL</td><td style="text-align:right;font:700 12px/1 inherit;color:var(--val)">10.0</td><td style="width:20px;text-align:center"><span class="al-dot ok"></span></td></tr>
+            <tr><td class="al-label">HH</td><td style="text-align:right;font:700 11px/1 inherit;color:var(--cyan)">95.0</td><td style="width:16px"><span class="al-dot ok"></span></td></tr>
+            <tr><td class="al-label">H</td><td style="text-align:right;font:700 11px/1 inherit;color:var(--cyan)">85.0</td><td style="width:16px"><span class="al-dot ok"></span></td></tr>
+            <tr><td class="al-label">L</td><td style="text-align:right;font:700 11px/1 inherit;color:var(--cyan)">20.0</td><td style="width:16px"><span class="al-dot ok"></span></td></tr>
+            <tr><td class="al-label">LL</td><td style="text-align:right;font:700 11px/1 inherit;color:var(--cyan)">10.0</td><td style="width:16px"><span class="al-dot ok"></span></td></tr>
           </table></div>
-        <div class="c" style="padding:8px 10px"><div class="c-title">PID Tuning</div>
-          <div class="pid-row"><span class="pid-label">Gain</span><span style="font:700 12px/1 inherit;color:var(--val)">1.20</span></div>
-          <div class="pid-row"><span class="pid-label">Rate</span><span style="font:700 12px/1 inherit;color:var(--val)">0.50</span></div>
-          <div class="pid-row"><span class="pid-label">Reset</span><span style="font:700 12px/1 inherit;color:var(--val)">3.00</span></div>
-        </div>
+        <div class="c" style="padding:8px"><div class="c-title">PID Tuning</div>
+          <div class="pid-row"><span class="pid-label">Gain</span><span style="font:700 11px/1 inherit;color:var(--cyan)">1.20</span></div>
+          <div class="pid-row"><span class="pid-label">Rate</span><span style="font:700 11px/1 inherit;color:var(--cyan)">0.50</span></div>
+          <div class="pid-row"><span class="pid-label">Reset</span><span style="font:700 11px/1 inherit;color:var(--cyan)">3.00</span></div></div>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-// Clock
 function tick(){document.getElementById('clk').textContent=new Date().toLocaleTimeString('en-US',{hour12:false})}
 setInterval(tick,1000);tick();
 
-// Navigation
-var levels=['l1','l2','l3'];
-var titles={l1:'Site Overview',l2:'#3 Melter Area',l3:'#3 Melter Run Screen'};
+var titles={l1:'Site Overview',l2:'#3 Melter Area',l3:'#3 Melter Controls'};
 var tags={l1:'L1',l2:'L2',l3:'L3'};
-var history_stack=['l1'];
+var sbIds={l1:'sb-home',l2:'sb-dash',l3:'sb-ctrl'};
+var stack=['l1'];
 
 function goTo(id){
   document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active')});
   document.getElementById(id).classList.add('active');
-  document.getElementById('hdrTitle').innerHTML=titles[id]+' <span class="tag">'+tags[id]+'</span>';
-  // Manage history
-  var idx=history_stack.indexOf(id);
-  if(idx===-1){history_stack.push(id)}else{history_stack=history_stack.slice(0,idx+1)}
-  document.getElementById('backBtn').style.display=history_stack.length>1?'':'none';
+  document.querySelectorAll('.sb-btn').forEach(function(b){b.classList.remove('active')});
+  if(sbIds[id])document.getElementById(sbIds[id]).classList.add('active');
+  var idx=stack.indexOf(id);
+  if(idx===-1)stack.push(id);else stack=stack.slice(0,idx+1);
   updateBread();
 }
-function goBack(){
-  if(history_stack.length>1){history_stack.pop();goTo(history_stack[history_stack.length-1])}
-}
 function updateBread(){
-  var html='';
-  for(var i=0;i<history_stack.length;i++){
-    if(i>0)html+='<span class="sep">/</span>';
-    if(i===history_stack.length-1){html+='<span class="cur">'+titles[history_stack[i]]+'</span>'}
-    else{html+='<span onclick="goTo(\''+history_stack[i]+'\')">'+titles[history_stack[i]]+'</span>'}
+  var h='';
+  for(var i=0;i<stack.length;i++){
+    if(i>0)h+=' <span style="color:var(--text-3)">/</span> ';
+    if(i===stack.length-1)h+='<span class="cur">'+titles[stack[i]]+'</span>';
+    else h+='<span onclick="goTo(\''+stack[i]+'\')">'+titles[stack[i]]+'</span>';
   }
-  document.getElementById('bread').innerHTML=html;
+  document.getElementById('bread').innerHTML=h;
 }
 
-// L3 controls
 function adjSP(d){var e=document.getElementById('spV');e.textContent=parseInt(e.textContent,10)+d}
 function tgMode(){var e=document.getElementById('mTg'),m=e.classList.contains('manual');
   e.classList.toggle('manual',!m);e.classList.toggle('auto',m);e.querySelector('.thumb').textContent=m?'A':'M'}
 function selFl(b){document.querySelectorAll('#flSeg button').forEach(function(x){x.classList.remove('sel')});b.classList.add('sel')}
-
-// L4 popup
 function openPopup(){document.getElementById('pidPopup').classList.add('open')}
 function closePopup(){document.getElementById('pidPopup').classList.remove('open')}
 function tgPID(){var e=document.getElementById('pidTg'),m=e.classList.contains('manual');
